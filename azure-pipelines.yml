@@ -1,0 +1,43 @@
+trigger:
+  - main  # or your default branch
+
+pool:
+  name: COMP367
+  demands:
+    - msbuild
+    - visualstudio
+
+variables:
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  solution: '**/*.sln'
+  artifactName: 'drop'
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: 'Use NuGet'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    restoreSolution: '$(solution)'
+
+- task: VSBuild@1
+  displayName: 'Build solution'
+  inputs:
+    solution: '$(solution)'
+    msbuildArgs: >
+      /p:DeployOnBuild=true 
+      /p:WebPublishMethod=Package 
+      /p:PackageAsSingleFile=true 
+      /p:SkipInvalidConfigurations=true 
+      /p:PackageLocation="$(Build.ArtifactStagingDirectory)\\"
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: '$(artifactName)'
+  condition: succeededOrFailed()
